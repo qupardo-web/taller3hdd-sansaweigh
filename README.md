@@ -6,7 +6,7 @@ Microservicio de gestión de estaciones de pesaje de paquetes.
 
 La documentación completa está disponible en [GitHub Pages](https://qupardo-web.github.io/taller3hdd-sansaweigh).
 
-También podés verla localmente:
+También puedes verla localmente:
 
 ```bash
 npm install -g docsify-cli
