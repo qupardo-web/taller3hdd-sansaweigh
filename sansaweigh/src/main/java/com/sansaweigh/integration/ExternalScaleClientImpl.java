@@ -59,16 +59,15 @@ public class ExternalScaleClientImpl implements ExternalScaleClient {
                         .body(ScaleSpecification.class);
             } catch (Exception e) {
                 log.error("Intento {} falló para scaleId={}: {}", intento, scaleId, e.getMessage());
-                if (intento == MAX_RETRIES) {
-                    break;
+                if (intento < MAX_RETRIES) {
+                    try {
+                        doSleep(delay);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    delay *= 2;
                 }
-                try {
-                    Thread.sleep(delay);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-                delay *= 2;
             }
         }
         return null;
@@ -104,5 +103,9 @@ public class ExternalScaleClientImpl implements ExternalScaleClient {
             log.warn("No se pudo leer especificación por defecto de Redis");
         }
         return new ScaleSpecification(DEFAULT_SCALE_ID, "Balanza Default", "Genérica", 100.0, 0.1, 0.0);
+    }
+
+    void doSleep(long millis) throws InterruptedException {
+        Thread.sleep(millis);
     }
 }
