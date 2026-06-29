@@ -2,7 +2,9 @@ package com.example.demo.service;
 
 import com.example.demo.exception.IllegalWeighingStateException;
 import com.example.demo.exception.PesajeNocturnoException;
+import com.example.demo.exception.BalanzaPrimaException;
 import com.example.demo.exception.RegistroNoEncontradoException;
+import com.example.demo.integration.ExternalScaleClient;
 import com.example.demo.model.CategoriaPeso;
 import com.example.demo.model.EstadoPesaje;
 import com.example.demo.model.RegistroPesaje;
@@ -20,9 +22,12 @@ import java.util.List;
 public class RegistroPesajeService {
 
     private final RegistroPesajeRepository repository;
+    private final ExternalScaleClient externalScaleClient;
 
-    public RegistroPesajeService(RegistroPesajeRepository repository) {
+    public RegistroPesajeService(RegistroPesajeRepository repository,
+                                  ExternalScaleClient externalScaleClient) {
         this.repository = repository;
+        this.externalScaleClient = externalScaleClient;
     }
 
     public RegistroPesaje crearRegistro(String idBalanza, String idPaquete, double pesoEnSansas) {
@@ -30,6 +35,7 @@ public class RegistroPesajeService {
 
         if (categoria == CategoriaPeso.PESADO) {
             validarRestriccionHoraria();
+            validarBalanzaPrima(idBalanza);
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -59,6 +65,7 @@ public class RegistroPesajeService {
 
         if (registro.getCategoria() == CategoriaPeso.PESADO) {
             validarRestriccionHoraria();
+            validarBalanzaPrima(registro.getIdBalanza());
         }
 
         transicionar(registro, EstadoPesaje.PESADO);
@@ -135,6 +142,34 @@ public class RegistroPesajeService {
             throw new PesajeNocturnoException(
                     "No se puede pesar paquetes pesados entre 20:00 y 06:00");
         }
+    }
+
+    private void validarBalanzaPrima(String idBalanza) {
+        int idNumerico;
+        try {
+            idNumerico = Integer.parseInt(idBalanza);
+        } catch (NumberFormatException e) {
+            return;
+        }
+
+        if (esPrimo(idNumerico) && LocalDate.now().getDayOfMonth() % 2 != 0) {
+            throw new BalanzaPrimaException(
+                    "Balanza con ID primo no puede registrar paquetes pesados en días impares");
+        }
+
+        externalScaleClient.getScaleSpecifications(idBalanza);
+    }
+
+    private boolean esPrimo(int n) {
+        if (n < 2) {
+            return false;
+        }
+        for (int i = 2; i * i <= n; i++) {
+            if (n % i == 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void transicionar(RegistroPesaje registro, EstadoPesaje nuevoEstado) {
