@@ -13,6 +13,7 @@ import com.sansaweigh.repository.RegistroPesajeRepository;
 
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -23,6 +24,7 @@ public class RegistroPesajeService {
 
     private final RegistroPesajeRepository repository;
     private final ExternalScaleClient externalScaleClient;
+    private Clock clock = Clock.systemDefaultZone();
 
     public RegistroPesajeService(RegistroPesajeRepository repository,
                                   ExternalScaleClient externalScaleClient) {
@@ -38,7 +40,7 @@ public class RegistroPesajeService {
             validarBalanzaPrima(idBalanza);
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         RegistroPesaje registro = RegistroPesaje.builder()
                 .idBalanza(idBalanza)
                 .idPaquete(idPaquete)
@@ -140,7 +142,7 @@ public class RegistroPesajeService {
     }
 
     private void validarRestriccionHoraria() {
-        LocalTime ahora = LocalTime.now();
+        LocalTime ahora = LocalTime.now(clock);
         if (ahora.isAfter(LocalTime.of(20, 0))
                 || ahora.isBefore(LocalTime.of(6, 0))) {
             throw new PesajeNocturnoException(
@@ -156,7 +158,7 @@ public class RegistroPesajeService {
             return;
         }
 
-        if (esPrimo(idNumerico) && LocalDate.now().getDayOfMonth() % 2 != 0) {
+        if (esPrimo(idNumerico) && LocalDate.now(clock).getDayOfMonth() % 2 != 0) {
             throw new BalanzaPrimaException(
                     "Balanza con ID primo no puede registrar paquetes pesados en días impares");
         }
@@ -177,7 +179,7 @@ public class RegistroPesajeService {
     }
 
     private void transicionar(RegistroPesaje registro, EstadoPesaje nuevoEstado) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         registro.setEstado(nuevoEstado);
         registro.setUpdatedAt(now);
         registro.getHistorialEstados().add(new TransicionEstado(nuevoEstado, now));

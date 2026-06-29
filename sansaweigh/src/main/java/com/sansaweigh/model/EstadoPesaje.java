@@ -20,6 +20,6 @@ public enum EstadoPesaje {
     private Set<EstadoPesaje> transicionesPermitidas;
 
     public boolean puedeTransicionarA(EstadoPesaje destino) {
-        return transicionesPermitidas != null && transicionesPermitidas.contains(destino);
+        return transicionesPermitidas.contains(destino);
     }
 }

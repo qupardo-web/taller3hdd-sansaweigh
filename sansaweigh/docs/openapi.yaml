@@ -1,0 +1,301 @@
+openapi: "3.1.0"
+info:
+  title: SansaWeigh API
+  description: Microservicio de gestión de estaciones de pesaje de paquetes
+  version: "1.0.0"
+  contact:
+    name: SansaWeigh Team
+servers:
+  - url: http://localhost:8080
+    description: Servidor local de desarrollo
+paths:
+  /api/registros:
+    post:
+      tags:
+        - Registro de Pesaje
+      summary: Crear un nuevo registro de pesaje
+      description: Clasifica el paquete y valida reglas de negocio (restricción horaria, balanza prima)
+      operationId: crearRegistro
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearRegistroRequest"
+      responses:
+        "201":
+          description: Registro creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistroPesaje"
+        "400":
+          description: Error de validación de regla de negocio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      tags:
+        - Registro de Pesaje
+      summary: Listar registros (todos o por rango de fechas)
+      operationId: listarRegistros
+      parameters:
+        - name: desde
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Fecha de inicio (YYYY-MM-DD)
+        - name: hasta
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Fecha de fin (YYYY-MM-DD)
+      responses:
+        "200":
+          description: Lista de registros
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegistroPesaje"
+  /api/registros/{id}:
+    get:
+      tags:
+        - Registro de Pesaje
+      summary: Obtener registro por ID
+      operationId: obtenerPorId
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Registro encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistroPesaje"
+        "404":
+          description: Registro no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags:
+        - Registro de Pesaje
+      summary: Actualizar peso de un registro
+      description: Solo permitido en estado INGRESADO
+      operationId: actualizarRegistro
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarRegistroRequest"
+      responses:
+        "200":
+          description: Registro actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistroPesaje"
+        "400":
+          description: Transición de estado inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/registros/{id}/pesar:
+    put:
+      tags:
+        - Registro de Pesaje
+      summary: Pesar un registro
+      description: Transiciona de INGRESADO a PESADO
+      operationId: pesarRegistro
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Registro pesado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistroPesaje"
+        "400":
+          description: Error de transición o regla de negocio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/registros/{id}/aprobar:
+    put:
+      tags:
+        - Registro de Pesaje
+      summary: Aprobar un registro
+      description: Transiciona de PESADO a APROBADO
+      operationId: aprobarRegistro
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Registro aprobado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistroPesaje"
+        "400":
+          description: Transición de estado inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/registros/{id}/rechazar:
+    put:
+      tags:
+        - Registro de Pesaje
+      summary: Rechazar un registro
+      description: Transiciona de PESADO a RECHAZADO
+      operationId: rechazarRegistro
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Registro rechazado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistroPesaje"
+        "400":
+          description: Transición de estado inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/registros/{id}/despachar:
+    put:
+      tags:
+        - Registro de Pesaje
+      summary: Despachar un registro
+      description: Transiciona de APROBADO a DESPACHADO
+      operationId: despacharRegistro
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Registro despachado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistroPesaje"
+        "400":
+          description: Transición de estado inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    RegistroPesaje:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID autogenerado del registro
+        idBalanza:
+          type: string
+          description: Identificador de la balanza
+        idPaquete:
+          type: string
+          description: Identificador del paquete
+        pesoEnSansas:
+          type: number
+          format: double
+          description: Peso del paquete en Sansas
+        categoria:
+          type: string
+          enum: [LIVIANO, MEDIANO, PESADO]
+          description: Categoría de peso clasificada
+        estado:
+          type: string
+          enum: [INGRESADO, PESADO, APROBADO, RECHAZADO, DESPACHADO]
+          description: Estado actual del registro
+        historialEstados:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransicionEstado"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TransicionEstado:
+      type: object
+      properties:
+        estado:
+          type: string
+          enum: [INGRESADO, PESADO, APROBADO, RECHAZADO, DESPACHADO]
+        timestamp:
+          type: string
+          format: date-time
+    CrearRegistroRequest:
+      type: object
+      required: [idBalanza, idPaquete, pesoEnSansas]
+      properties:
+        idBalanza:
+          type: string
+        idPaquete:
+          type: string
+        pesoEnSansas:
+          type: number
+          format: double
+    ActualizarRegistroRequest:
+      type: object
+      required: [nuevoPesoEnSansas]
+      properties:
+        nuevoPesoEnSansas:
+          type: number
+          format: double
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
